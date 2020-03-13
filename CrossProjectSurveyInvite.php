@@ -40,18 +40,16 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                     $email = trim($email);
                     if (filter_var($email,FILTER_VALIDATE_EMAIL)) {
                         $autoRecordID = $this->framework->addAutoNumberedRecord($destinationProject);
-                        echo "Dest: $destinationProject, Record: $autoRecordID, Form: $surveyForm<br/>";
                         $hashInfo = $this->resetSurveyAndGetCodes($destinationProject,$autoRecordID,$surveyForm);
                         $hash = $hashInfo['hash'];
                         if ($hash != "") {
-                            $surveyLink = $_SERVER['SERVER_NAME']."/redcap/surveys?s=".$hash;
+                            $surveyLink = "<a href='https://".$_SERVER['SERVER_NAME']."/surveys/?s=".$hash."'>https://".$_SERVER['SERVER_NAME']."/surveys/?s=".$hash."</a>";
                             $emailLanguage = str_replace("SURVEY_LINK",$surveyLink,$emailLanguage);
-                            mail($email,"Test Survey Invitation",$emailLanguage);
+                            mail($email,"Test Survey Invitation",htmlentities($emailLanguage));
                         }
                     }
                 }
             }
-            exit;
         }
     }
 }
