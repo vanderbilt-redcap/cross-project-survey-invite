@@ -1,0 +1,57 @@
+{
+  "name": "Cross Project Survey Invite",
+
+  "namespace": "Vanderbilt\\CrossProjectSurveyInvite",
+
+  "authors": [
+    {
+      "name": "Ryan Moore",
+      "email": "datacore@vumc.org",
+      "institution": "Vanderbilt University Medical Center"
+    }
+  ],
+
+  "description": "After saving a field with comma separated email addresses, create records in another project and email survey invites.",
+
+  "framework-version": 2,
+
+  "permissions": [
+    "select_data",
+    "redcap_save_record"
+  ],
+
+  "project-settings": [
+    {
+      "key": "project_piping",
+      "name": "List of Projects to Pipe To",
+      "type": "sub_settings",
+      "repeatable": true,
+      "sub_settings": [
+        {
+          "key": "email_field",
+          "name": "Field With Comma Separated List of Emails",
+          "type":"field-list",
+          "required": true
+        },
+        {
+          "key": "destination_project",
+          "name": "Project to Generate Surveys",
+          "type": "project-id",
+          "required": true
+        },
+        {
+          "key": "survey_form",
+          "name": "Survey Form on Destination Project",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "email_language",
+          "name": "Email Language in Base HTML (can use data piping)",
+          "type": "textarea",
+          "required": true
+        }
+      ]
+    }
+  ]
+}
