@@ -16,6 +16,10 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $currentProject = new \Project($project_id);
         $currentMetaData = $currentProject->metadata;
 
+        // Set content-type header for sending HTML email
+        $headers = "MIME-Version: 1.0" . "\r\n";
+        $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+
         foreach ($destinationProjects as $index => $destinationProject) {
             $emailField = $emailFields[$index];
             $surveyForm = $surveyForms[$index];
@@ -45,7 +49,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                         if ($hash != "") {
                             $surveyLink = "<a href='https://".$_SERVER['SERVER_NAME']."/surveys/?s=".$hash."'>https://".$_SERVER['SERVER_NAME']."/surveys/?s=".$hash."</a>";
                             $emailLanguage = str_replace("SURVEY_LINK",$surveyLink,$emailLanguage);
-                            mail($email,"Test Survey Invitation",htmlentities($emailLanguage));
+                            mail($email,"Test Survey Invitation",$emailLanguage,$headers);
                         }
                     }
                 }
