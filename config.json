@@ -17,7 +17,8 @@
 
   "permissions": [
     "select_data",
-    "redcap_save_record"
+    "redcap_save_record",
+    "redcap_data_entry_form"
   ],
 
   "project-settings": [
@@ -30,6 +31,18 @@
         {
           "key": "email_field",
           "name": "Field With Comma Separated List of Emails",
+          "type":"field-list",
+          "required": true
+        },
+        {
+          "key": "email_sender",
+          "name": "Field With Email Address to Send Emails From",
+          "type":"field-list",
+          "required": true
+        },
+        {
+          "key": "email_subject",
+          "name": "Field With Subject Line for Email",
           "type":"field-list",
           "required": true
         },
@@ -47,9 +60,14 @@
         },
         {
           "key": "email_language",
-          "name": "Email Language in Base HTML (can use data piping)",
-          "type": "textarea",
+          "name": "Field Storing Email Language",
+          "type": "field-list",
           "required": true
+        },
+        {
+          "key": "send_date_field",
+          "name": "Optional Field to Define a Send Date",
+          "type": "field-list"
         }
       ]
     }
