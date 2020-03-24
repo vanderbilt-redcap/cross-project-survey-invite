@@ -108,7 +108,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $emailId = db_insert_id();
 
         ##insert into emails recipient table
-        $sql = "INSERT INTO redcap_surveys_emails_recipients (email_id, participant_id, static_phone, delivery_type)
+        $sql = "INSERT INTO redcap_surveys_emails_recipients (email_id, participant_id, static_email, delivery_type)
                 VALUES ($emailId, $participantId, '{$emailAddress}', 'EMAIL')";
         //echo "$sql<br/>";
         if(!db_query($sql)) throw new \Exception("Error: ".db_error()." <br />$sql<br />");
