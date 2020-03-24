@@ -58,7 +58,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
             $additionalParams = (filter_var($senderValue, FILTER_VALIDATE_EMAIL) ? "-f ".$senderValue : null);
 
-            if ($emailValue != "" && $emailLanguage != "" && $subjectValue != "") {
+            if ($emailValue != "" && $emailLanguage != "" && $subjectValue != "" && filter_var($senderValue,FILTER_VALIDATE_EMAIL)) {
                 $emailsArray = explode(",", $emailValue);
                 foreach ($emailsArray as $email) {
                     $email = trim($email);
