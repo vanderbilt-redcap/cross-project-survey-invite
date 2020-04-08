@@ -19,6 +19,8 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $emailSenders = $this->getProjectSetting('email_sender');
         $emailSubjects = $this->getProjectSetting('email_subject');
         $sendDates = $this->getProjectSetting('send_date_field');
+        $sourceFields = $this->getProjectSetting('source-field');
+        $destFields = $this->getProjectSetting('destination-field');
 
         $currentProject = new \Project($project_id);
         $currentMetaData = $currentProject->metadata;
@@ -37,10 +39,22 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
             $projectObject = new \Project($destinationProject);
             $surveyId = $projectObject->forms[$surveyForm]['survey_id'];
+            $destMeta = $projectObject->metadata;
 
             $languageMetaData = $currentMetaData[$languageField];
 
             $fieldList = array($emailField,$senderField,$languageField,$subjectField,$sendDateField);
+            $destFieldList = array();
+
+            foreach ($sourceFields[$index] as $subIndex => $sourceField) {
+                $destField = $destFields[$index][$subIndex];
+                if (!in_array($destField, array_keys($destMeta))) continue;
+                if ($currentMetaData[$sourceField]['element_enum'] != $destMeta[$destField]['element_enum'] || $currentMetaData[$sourceField]['element_type'] != $destMeta[$destField]['element_type'] || $currentMetaData[$sourceField]['element_validation_type'] != $destMeta[$destField]['element_validation_type']) continue;
+
+                $fieldList[] = $sourceField;
+                $sourceFieldList[] = $sourceField;
+                $destFieldList[$sourceField] = $destMeta[$destField];
+            }
 
             $currentData = \REDCap::getData($project_id, 'array', array($record), $fieldList);
 
@@ -69,13 +83,29 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                         if ($hash != "") {
                             $surveyLink = "<a href='https://".$_SERVER['SERVER_NAME']."/surveys/?s=".$hash."'>https://".$_SERVER['SERVER_NAME']."/surveys/?s=".$hash."</a>";
                             $emailLanguage = str_replace("SURVEY_LINK",$surveyLink,$emailLanguage);
+                            //$emailLanguage = preg_replace("/[^a-zA-Z0-9~!@#$%^&*()_+\/<>=\'\";:,\- ]+/", ' ', $emailLanguage);
+                            #Remove weird character created through character encoding mismatch between Rich Text field and the mysql database creating Â characters from &nbsp;
+                            $emailLanguage = str_replace(chr(194),'',$emailLanguage);
                             if ($sendDateField != "" && $sendDateValue != "") {
                                 $sendDate = date('Y-m-d H:i:s',strtotime($sendDateValue));
                             }
                             else {
                                 $sendDate = date('Y-m-d H:i:s');
                             }
-                            //mail($email,"Test Survey Invitation",$emailLanguage,$headers,$additionalParams);
+
+                            foreach ($sourceFieldList as $sourceField) {
+                                if (isset($destFieldList[$sourceField])) {
+                                    $sourceValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$sourceField]['form_name'],$sourceField,$repeat_instance);
+                                    $instrumentRepeats = $projectObject->isRepeatingFormOrEvent($projectObject->firstEventId,$destFieldList[$sourceField]['form_name']);
+                                    $saveArray = array(0=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$destField=>$sourceValue));
+                                    if ($instrumentRepeats) {
+                                        $saveArray[0]['redcap_repeat_instance'] = $repeat_instance;
+                                        $saveArray[0]['redcap_repeat_instrument'] = $destFieldList[$sourceField]['form_name'];
+                                    }
+                                    $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
+                                }
+                            }
+
                             $this->addSurveyToScheduler($autoRecordID,$email,$surveyId,$sendDate,$hash,$subjectValue,$emailLanguage,$senderValue);
                         }
                     }

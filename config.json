@@ -68,6 +68,23 @@
           "key": "send_date_field",
           "name": "Optional Field to Define a Send Date",
           "type": "field-list"
+        },
+        {
+          "key": "pipe-data-fields",
+          "name": "Data Fields to Pipe to Destination Survey",
+          "type": "sub_settings",
+          "sub_settings": [
+            {
+              "key": "source-field",
+              "name": "Field on This Project to Pipe Over",
+              "type": "field-list"
+            },
+            {
+              "key": "destination-field",
+              "name": "Field to Receive Data",
+              "type": "text"
+            }
+          ]
         }
       ]
     }
