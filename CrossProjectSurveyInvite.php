@@ -42,6 +42,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             $destMeta = $projectObject->metadata;
 
             $languageMetaData = $currentMetaData[$languageField];
+            $emailMetaData = $currentMetaData[$emailField];
 
             $fieldList = array($emailField,$senderField,$languageField,$subjectField,$sendDateField);
             $destFieldList = array();
@@ -73,7 +74,21 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             $additionalParams = (filter_var($senderValue, FILTER_VALIDATE_EMAIL) ? "-f ".$senderValue : null);
 
             if ($emailValue != "" && $emailLanguage != "" && $subjectValue != "" && filter_var($senderValue,FILTER_VALIDATE_EMAIL)) {
-                $emailsArray = explode(",", $emailValue);
+                if ($emailMetaData['element_type'] == "file") {
+                    $emailsArray = array();
+                    $attributes = \Files::getEdocContentsAttributes($emailValue);
+                    if ($attributes[0] == "text/plain" && substr($attributes[1],-3,3) == "csv") {
+                        $split = explode(",",$attributes[2]);
+                        foreach ($split as $email) {
+                            if (filter_var(trim($email),FILTER_VALIDATE_EMAIL)) {
+                                $emailsArray[] = trim($email);
+                            }
+                        }
+                    }
+                }
+                else {
+                    $emailsArray = explode(",", $emailValue);
+                }
                 foreach ($emailsArray as $email) {
                     $email = trim($email);
                     if (filter_var($email,FILTER_VALIDATE_EMAIL)) {

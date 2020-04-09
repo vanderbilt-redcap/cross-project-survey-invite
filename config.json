@@ -30,7 +30,7 @@
       "sub_settings": [
         {
           "key": "email_field",
-          "name": "Field With Comma Separated List of Emails",
+          "name": "Field With Comma Separated List of Emails (either text or CSV file field)",
           "type":"field-list",
           "required": true
         },
