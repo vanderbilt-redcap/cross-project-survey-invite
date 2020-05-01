@@ -39,6 +39,10 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
             $projectObject = new \Project($destinationProject);
             $surveyId = $projectObject->forms[$surveyForm]['survey_id'];
+            if ($surveyId == "") {
+                //echo "Skipping<br/>";
+                continue;
+            }
             $destMeta = $projectObject->metadata;
 
             $languageMetaData = $currentMetaData[$languageField];
@@ -89,6 +93,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                 else {
                     $emailsArray = explode(",", $emailValue);
                 }
+
                 foreach ($emailsArray as $email) {
                     $email = trim($email);
                     if (filter_var($email,FILTER_VALIDATE_EMAIL)) {
@@ -120,7 +125,6 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                     $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                                 }
                             }
-
                             $this->addSurveyToScheduler($autoRecordID,$email,$surveyId,$sendDate,$hash,$subjectValue,$emailLanguage,$senderValue);
                         }
                     }

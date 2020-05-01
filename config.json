@@ -73,6 +73,7 @@
           "key": "pipe-data-fields",
           "name": "Data Fields to Pipe to Destination Survey",
           "type": "sub_settings",
+          "repeatable": true,
           "sub_settings": [
             {
               "key": "source-field",
