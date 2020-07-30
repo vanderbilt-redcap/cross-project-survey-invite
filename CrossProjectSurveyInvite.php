@@ -94,10 +94,11 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                     $emailsArray = explode(",", $emailValue);
                 }
 
-                foreach ($emailsArray as $email) {
+                $autoRecordID = $this->addAutoNumberedRecord($destinationProject);
+                $emailInstance = 1;
+                foreach ($emailsArray as $emailIndex => $email) {
                     $email = trim($email);
                     if (filter_var($email,FILTER_VALIDATE_EMAIL)) {
-                        $autoRecordID = $this->addAutoNumberedRecord($destinationProject);
                         $hashInfo = $this->resetSurveyAndGetCodes($destinationProject,$autoRecordID,$surveyForm);
                         $hash = $hashInfo['hash'];
                         if ($hash != "") {
@@ -113,24 +114,28 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                 $sendDate = date('Y-m-d H:i:s');
                             }
 
-                            foreach ($sourceFieldList as $sourceField) {
+                            foreach ($sourceFieldList as $sourceIndex => $sourceField) {
                                 if (isset($destFieldList[$sourceField])) {
+                                    $destField = $destFieldList[$sourceField]['field_name'];
                                     $sourceValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$sourceField]['form_name'],$sourceField,$repeat_instance);
                                     $instrumentRepeats = $projectObject->isRepeatingFormOrEvent($projectObject->firstEventId,$destFieldList[$sourceField]['form_name']);
-                                    $saveArray = array(0=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$destField=>$sourceValue));
+                                    $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$destField=>$sourceValue));
                                     if ($instrumentRepeats) {
-                                        $saveArray[0]['redcap_repeat_instance'] = $repeat_instance;
-                                        $saveArray[0]['redcap_repeat_instrument'] = $destFieldList[$sourceField]['form_name'];
+                                        $saveArray[$sourceIndex]['redcap_repeat_instance'] = $emailInstance;
+                                        $saveArray[$sourceIndex]['redcap_repeat_instrument'] = $destFieldList[$sourceField]['form_name'];
                                     }
+
                                     $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                                 }
                             }
                             $this->addSurveyToScheduler($autoRecordID,$email,$surveyId,$sendDate,$hash,$subjectValue,$emailLanguage,$senderValue);
                         }
                     }
+                    $emailInstance++;
                 }
             }
         }
+        //$this->exitAfterHook();
     }
 
     function getFieldValue($recordData,$record_id,$event_id,$form,$fieldname,$instance) {
