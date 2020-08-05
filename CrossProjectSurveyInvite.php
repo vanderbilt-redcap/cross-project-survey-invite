@@ -8,7 +8,19 @@ use ExternalModules\ExternalModules;
 class CrossProjectSurveyInvite extends AbstractExternalModule
 {
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
-
+        /*$the_date = strtotime("2010-01-19 00:00:00");
+        $timeOffset = $this->getProjectSetting('time_offset')[0];
+        echo "Time offset: $timeOffset<br/>";
+        if (is_numeric($timeOffset)) {
+            echo(date_default_timezone_get() . "<br />");
+            echo(date("Y-d-m G:i:s", $the_date) . "<br />");
+            echo(date_default_timezone_set("UTC") . "<br />");
+            echo(date("Y-d-m G:i:s", $the_date) . "<br />");
+            echo "Offset from UTC ".$the_date." offsetting ".(intval($timeOffset)*60*60)." to get ".($the_date+(intval($timeOffset)*60*60))."<br/>";
+            echo (date("Y-d-m G:i:s", $the_date+(intval($timeOffset)*60*60)) . "<br />");
+            echo (date("Y-d-m G:i:s", $the_date+(intval($timeOffset)*60*60)) . "<br />");
+            echo (gmdate("Y-d-m H:i:s", $the_date+(intval($timeOffset)*60*60))."<br />");
+        }*/
     }
 
     function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id = NULL, $survey_hash = NULL, $response_id = NULL, $repeat_instance = 1) {
@@ -21,6 +33,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $sendDates = $this->getProjectSetting('send_date_field');
         $sourceFields = $this->getProjectSetting('source-field');
         $destFields = $this->getProjectSetting('destination-field');
+        $timeOffsets = $this->getProjectSetting('time_offset');
 
         $currentProject = new \Project($project_id);
         $currentMetaData = $currentProject->metadata;
@@ -36,6 +49,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             $languageField = $emailLanguages[$index];
             $subjectField = $emailSubjects[$index];
             $sendDateField = $sendDates[$index];
+            $timeOffset = $timeOffsets[$index];
 
             $projectObject = new \Project($destinationProject);
             $surveyId = $projectObject->forms[$surveyForm]['survey_id'];
@@ -112,6 +126,11 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                             }
                             else {
                                 $sendDate = date('Y-m-d H:i:s');
+                            }
+
+                            if (is_numeric($timeOffset)) {
+                                $serverDate = strtotime($sendDate);
+                                $sendDate = gmdate("Y-d-m H:i:s", $serverDate+(intval($timeOffset)*60*60));
                             }
 
                             foreach ($sourceFieldList as $sourceIndex => $sourceField) {

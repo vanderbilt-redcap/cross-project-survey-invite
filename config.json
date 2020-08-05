@@ -70,6 +70,11 @@
           "type": "field-list"
         },
         {
+          "key": "time_offset",
+          "name": "Optional: Type Your Timezone's Offset from UTC time",
+          "type": "text"
+        },
+        {
           "key": "pipe-data-fields",
           "name": "Data Fields to Pipe to Destination Survey",
           "type": "sub_settings",
