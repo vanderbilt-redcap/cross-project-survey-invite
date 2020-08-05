@@ -66,12 +66,17 @@
         },
         {
           "key": "send_date_field",
-          "name": "Optional Field to Define a Send Date",
+          "name": "Optional: Field to Define a Send Date",
           "type": "field-list"
         },
         {
           "key": "time_offset",
           "name": "Optional: Type Your Timezone's Offset from UTC time",
+          "type": "text"
+        },
+        {
+          "key": "email_pipe_field",
+          "name": "Optional: Field in Destination Project to Store Recipient's Email",
           "type": "text"
         },
         {

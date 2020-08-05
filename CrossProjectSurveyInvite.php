@@ -34,6 +34,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $sourceFields = $this->getProjectSetting('source-field');
         $destFields = $this->getProjectSetting('destination-field');
         $timeOffsets = $this->getProjectSetting('time_offset');
+        $destEmailFields = $this->getProjectSetting('email_pipe_field');
 
         $currentProject = new \Project($project_id);
         $currentMetaData = $currentProject->metadata;
@@ -50,6 +51,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             $subjectField = $emailSubjects[$index];
             $sendDateField = $sendDates[$index];
             $timeOffset = $timeOffsets[$index];
+            $destEmailField = $destEmailFields[$index];
 
             $projectObject = new \Project($destinationProject);
             $surveyId = $projectObject->forms[$surveyForm]['survey_id'];
@@ -146,6 +148,15 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
                                     $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                                 }
+                            }
+                            if ($destEmailField != "" && in_array($destEmailField,array_keys($destMeta))) {
+                                $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$destEmailField=>$email));
+                                if ($instrumentRepeats) {
+                                    $saveArray[$sourceIndex]['redcap_repeat_instance'] = $emailInstance;
+                                    $saveArray[$sourceIndex]['redcap_repeat_instrument'] = $destFieldList[$sourceField]['form_name'];
+                                }
+
+                                $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                             }
                             $this->addSurveyToScheduler($autoRecordID,$email,$surveyId,$sendDate,$hash,$subjectValue,$emailLanguage,$senderValue);
                         }
