@@ -8,19 +8,7 @@ use ExternalModules\ExternalModules;
 class CrossProjectSurveyInvite extends AbstractExternalModule
 {
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
-        /*$the_date = strtotime("2010-01-19 00:00:00");
-        $timeOffset = $this->getProjectSetting('time_offset')[0];
-        echo "Time offset: $timeOffset<br/>";
-        if (is_numeric($timeOffset)) {
-            echo(date_default_timezone_get() . "<br />");
-            echo(date("Y-d-m G:i:s", $the_date) . "<br />");
-            echo(date_default_timezone_set("UTC") . "<br />");
-            echo(date("Y-d-m G:i:s", $the_date) . "<br />");
-            echo "Offset from UTC ".$the_date." offsetting ".(intval($timeOffset)*60*60)." to get ".($the_date+(intval($timeOffset)*60*60))."<br/>";
-            echo (date("Y-d-m G:i:s", $the_date+(intval($timeOffset)*60*60)) . "<br />");
-            echo (date("Y-d-m G:i:s", $the_date+(intval($timeOffset)*60*60)) . "<br />");
-            echo (gmdate("Y-d-m H:i:s", $the_date+(intval($timeOffset)*60*60))."<br />");
-        }*/
+
     }
 
     function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id = NULL, $survey_hash = NULL, $response_id = NULL, $repeat_instance = 1) {
@@ -138,7 +126,9 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                             foreach ($sourceFieldList as $sourceIndex => $sourceField) {
                                 if (isset($destFieldList[$sourceField])) {
                                     $destField = $destFieldList[$sourceField]['field_name'];
+
                                     $sourceValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$sourceField]['form_name'],$sourceField,$repeat_instance);
+
                                     $instrumentRepeats = $projectObject->isRepeatingFormOrEvent($projectObject->firstEventId,$destFieldList[$sourceField]['form_name']);
                                     $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$destField=>$sourceValue));
                                     if ($instrumentRepeats) {
@@ -146,6 +136,11 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                         $saveArray[$sourceIndex]['redcap_repeat_instrument'] = $destFieldList[$sourceField]['form_name'];
                                     }
 
+                                    if ($currentMetaData[$sourceField]['element_type'] == "file" && $destFieldList[$sourceField]['element_type'] == "file") {
+                                        list($oldPID,$copyEdoc) = $this::copyEdoc($projectObject->project_id,$sourceValue);
+                                        $saveArray[$sourceIndex][$destField] = $copyEdoc;
+                                        $this->saveEdocIDToField($projectObject->project_id,$projectObject->firstEventId,$autoRecordID,$destField,$copyEdoc,$emailInstance);
+                                    }
                                     $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                                 }
                             }
@@ -169,8 +164,12 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
     }
 
     function getFieldValue($recordData,$record_id,$event_id,$form,$fieldname,$instance) {
+        echo "Record: $record_id,Event: $event_id,Form:$form,Instance: $instance,Field:$fieldname<br/>";
         if (isset($recordData[$record_id]['repeat_instances'][$event_id][$form][$instance][$fieldname])) {
             return $recordData[$record_id]['repeat_instances'][$event_id][$form][$instance][$fieldname];
+        }
+        elseif (isset($recordData[$record_id]['repeat_instances'][$event_id][''][$instance][$fieldname])) {
+            return $recordData[$record_id]['repeat_instances'][$event_id][''][$instance][$fieldname];
         }
         elseif (isset($recordData[$record_id][$event_id][$fieldname])) {
             return $recordData[$record_id][$event_id][$fieldname];
@@ -211,5 +210,43 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                 VALUES ($e_r_id, '0', '{$recordID}','".$sendDate."' ,'QUEUED')";
         //echo "$sql<br/>";
         if(!db_query($sql))  throw new \Exception("Error: ".db_error()." <br />$sql<br />");
+    }
+
+    private static function copyEdoc($pid, $edocId)
+    {
+        if(empty($edocId)){
+            // The stored id is already empty.
+            return '';
+        }
+
+        $sql = "select * from redcap_edocs_metadata where doc_id = ? and date_deleted_server is null";
+        $result = ExternalModules::query($sql, [$edocId]);
+        $row = $result->fetch_assoc();
+
+        if(!$row){
+            return '';
+        }
+
+        $row = ExternalModules::convertIntsToStrings($row);
+        $oldPid = $row['project_id'];
+        if($oldPid === $pid){
+            // This edoc is already associated with this project.  No need to recreate it.
+            $newEdocId = $edocId;
+        }
+        else{
+            $newEdocId = copyFile($edocId, $pid);
+        }
+
+        return [
+            $oldPid,
+            (string)$newEdocId // We must cast to a string to avoid an issue on the js side when it comes to handling file fields if stored as integers.
+        ];
+    }
+
+    function saveEdocIDToField($project_id,$event_id,$record,$field_name,$edocID,$instance = 1) {
+        //$instance = ($instance == '1' ? "NULL" : $instance);
+        //echo "Instance is $instance<br/>";
+        $this->query("INSERT INTO redcap_data (project_id, event_id, record, field_name, value, instance) 
+						VALUES (?, ?, ?, ?, ?, ?)",array($project_id,$event_id,$record,$field_name,$edocID,($instance == '1' ? NULL : $instance)));
     }
 }
