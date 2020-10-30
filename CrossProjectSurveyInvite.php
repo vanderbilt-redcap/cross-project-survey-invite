@@ -8,7 +8,21 @@ use ExternalModules\ExternalModules;
 class CrossProjectSurveyInvite extends AbstractExternalModule
 {
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
-
+        $destinationProjects = $this->getProjectSetting('destination_project');
+        $recordFieldMappings = $this->getProjectSetting('record_id_mapping');
+        foreach ($destinationProjects as $index => $destinationProject) {
+            $recordFieldMapping = $recordFieldMappings[$index];
+            $destProject = new \Project($destinationProject);
+            echo "Project: $destinationProject<br/>";
+            $dataParameters = array("project_id" => $destinationProject, "return_format" => 'json', "fields" => array($recordFieldMapping,$destProject->table_pk), "filterLogic" => "[".$recordFieldMapping."] = '".$record."'");
+            echo "<pre>";
+            print_r($dataParameters);
+            echo "</pre>";
+            $destinationData = json_decode(\REDCap::getData($dataParameters),true);
+            echo "<pre>";
+            print_r($destinationData);
+            echo "</pre>";
+        }
     }
 
     function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id = NULL, $survey_hash = NULL, $response_id = NULL, $repeat_instance = 1) {
@@ -23,6 +37,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $destFields = $this->getProjectSetting('destination-field');
         $timeOffsets = $this->getProjectSetting('time_offset');
         $destEmailFields = $this->getProjectSetting('email_pipe_field');
+        $recordFieldMappings = $this->getProjectSetting('record_id_mapping');
 
         $currentProject = new \Project($project_id);
         $currentMetaData = $currentProject->metadata;
@@ -40,6 +55,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             $sendDateField = $sendDates[$index];
             $timeOffset = $timeOffsets[$index];
             $destEmailField = $destEmailFields[$index];
+            $recordFieldMapping = $recordFieldMappings[$index];
 
             $projectObject = new \Project($destinationProject);
             $surveyId = $projectObject->forms[$surveyForm]['survey_id'];
@@ -66,6 +82,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             }
 
             $currentData = \REDCap::getData($project_id, 'array', array($record), $fieldList);
+            $destinationData = \REDCap::getData(array(0=>$destinationProject,1=>'array',9=>'['.$recordFieldMapping.'] = '.$record));
 
             $emailValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$emailField]['form_name'],$emailField,$repeat_instance);
             $senderValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$senderField]['form_name'],$senderField,$repeat_instance);
@@ -98,11 +115,31 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                     $emailsArray = explode(",", $emailValue);
                 }
 
-                $autoRecordID = $this->addAutoNumberedRecord($destinationProject);
-                $emailInstance = 1;
+                $dataParameters = array("project_id" => $destinationProject, "return_format" => 'json', "fields" => array($recordFieldMapping,$projectObject->table_pk,$destEmailField), "filterLogic" => "[".$recordFieldMapping."] = '".$record."'");
+                $destinationData = json_decode(\REDCap::getData($dataParameters),true);
+                $autoRecordID = "";
+                $emailInstance = 0;
+                $existingEmails = array();
+                foreach ($destinationData as $instanceData) {
+                    if ($instanceData[$projectObject->table_pk] != $record) continue;
+                    if ($instanceData['redcap_repeat_instance'] > $emailInstance) {
+                        $emailInstance = $instanceData['redcap_repeat_instance'];
+                    }
+                    if (!in_array($instanceData[$destEmailField],$existingEmails)) {
+                        $existingEmails[] = $instanceData[$destEmailField];
+                    }
+                }
+                $emailInstance++;
+
+                if ($autoRecordID == "") {
+                    $autoRecordID = $this->addAutoNumberedRecord($destinationProject);
+                }
+
                 foreach ($emailsArray as $emailIndex => $email) {
                     $email = trim($email);
                     if (filter_var($email,FILTER_VALIDATE_EMAIL)) {
+                        if (in_array($email,$existingEmails)) continue;
+                        $existingEmails[] = $email;
                         $hashInfo = $this->resetSurveyAndGetCodes($destinationProject,$autoRecordID,$surveyForm);
                         $hash = $hashInfo['hash'];
                         if ($hash != "") {
@@ -130,7 +167,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                     $sourceValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$sourceField]['form_name'],$sourceField,$repeat_instance);
 
                                     $instrumentRepeats = $projectObject->isRepeatingFormOrEvent($projectObject->firstEventId,$destFieldList[$sourceField]['form_name']);
-                                    $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$destField=>$sourceValue));
+                                    $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$destField=>$sourceValue,$destEmailField=>$email));
                                     if ($instrumentRepeats) {
                                         $saveArray[$sourceIndex]['redcap_repeat_instance'] = $emailInstance;
                                         $saveArray[$sourceIndex]['redcap_repeat_instrument'] = $destFieldList[$sourceField]['form_name'];
@@ -164,7 +201,6 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
     }
 
     function getFieldValue($recordData,$record_id,$event_id,$form,$fieldname,$instance) {
-        echo "Record: $record_id,Event: $event_id,Form:$form,Instance: $instance,Field:$fieldname<br/>";
         if (isset($recordData[$record_id]['repeat_instances'][$event_id][$form][$instance][$fieldname])) {
             return $recordData[$record_id]['repeat_instances'][$event_id][$form][$instance][$fieldname];
         }
