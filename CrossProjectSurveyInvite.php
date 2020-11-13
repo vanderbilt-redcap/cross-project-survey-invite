@@ -8,7 +8,7 @@ use ExternalModules\ExternalModules;
 class CrossProjectSurveyInvite extends AbstractExternalModule
 {
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
-        $destinationProjects = $this->getProjectSetting('destination_project');
+        /*$destinationProjects = $this->getProjectSetting('destination_project');
         $recordFieldMappings = $this->getProjectSetting('record_id_mapping');
         foreach ($destinationProjects as $index => $destinationProject) {
             $recordFieldMapping = $recordFieldMappings[$index];
@@ -22,7 +22,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             echo "<pre>";
             print_r($destinationData);
             echo "</pre>";
-        }
+        }*/
     }
 
     function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id = NULL, $survey_hash = NULL, $response_id = NULL, $repeat_instance = 1) {
