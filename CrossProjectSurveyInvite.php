@@ -186,16 +186,16 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                 $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$destEmailField=>$email));
                                 if ($instrumentRepeats) {
                                     $saveArray[$sourceIndex]['redcap_repeat_instance'] = $emailInstance;
-                                    $saveArray[$sourceIndex]['redcap_repeat_instrument'] = $destFieldList[$sourceField]['form_name'];
+                                    $saveArray[$sourceIndex]['redcap_repeat_instrument'] = $destMeta[$destEmailField]['form_name'];
                                 }
 
                                 $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                             }
-                            if ($recordFieldMapping != "") {
+                            if ($recordFieldMapping != "" && in_array($recordFieldMapping,array_keys($destMeta))) {
                                 $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$recordFieldMapping=>$record));
                                 if ($instrumentRepeats) {
                                     $saveArray[$sourceIndex]['redcap_repeat_instance'] = $emailInstance;
-                                    $saveArray[$sourceIndex]['redcap_repeat_instrument'] = $destFieldList[$sourceField]['form_name'];
+                                    $saveArray[$sourceIndex]['redcap_repeat_instrument'] = $destMeta[$recordFieldMapping]['form_name'];
                                 }
 
                                 $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
