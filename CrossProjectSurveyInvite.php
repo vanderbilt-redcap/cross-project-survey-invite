@@ -137,7 +137,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                             $linkPart = explode("?s=",$surveyLink);
                             $hash = $linkPart[count($linkPart) - 1];
                             $emailLanguage = str_replace("SURVEY_LINK", $messageLink, $emailLanguage);
-                            //$emailLanguage = preg_replace("/[^a-zA-Z0-9~!@#$%^&*()_+\/<>=\'\";:,\- ]+/", ' ', $emailLanguage);
+                            $emailLanguage = preg_replace("/[^a-zA-Z0-9~!@#$%^&*()_+\/<>=\'\";:,\- ]+/", ' ', $emailLanguage);
                             #Remove weird character created through character encoding mismatch between Rich Text field and the mysql database creating Â characters from &nbsp;
                             $emailLanguage = str_replace(chr(194),'',$emailLanguage);
                             if ($sendDateField != "" && $sendDateValue != "") {
