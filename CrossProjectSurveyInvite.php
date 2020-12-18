@@ -8,21 +8,7 @@ use ExternalModules\ExternalModules;
 class CrossProjectSurveyInvite extends AbstractExternalModule
 {
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
-        /*$destinationProjects = $this->getProjectSetting('destination_project');
-        $recordFieldMappings = $this->getProjectSetting('record_id_mapping');
-        foreach ($destinationProjects as $index => $destinationProject) {
-            $recordFieldMapping = $recordFieldMappings[$index];
-            $destProject = new \Project($destinationProject);
-            echo "Project: $destinationProject<br/>";
-            $dataParameters = array("project_id" => $destinationProject, "return_format" => 'json', "fields" => array($recordFieldMapping,$destProject->table_pk), "filterLogic" => "[".$recordFieldMapping."] = '".$record."'");
-            echo "<pre>";
-            print_r($dataParameters);
-            echo "</pre>";
-            $destinationData = json_decode(\REDCap::getData($dataParameters),true);
-            echo "<pre>";
-            print_r($destinationData);
-            echo "</pre>";
-        }*/
+
     }
 
     function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id = NULL, $survey_hash = NULL, $response_id = NULL, $repeat_instance = 1) {
@@ -82,12 +68,12 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             }
 
             $currentData = \REDCap::getData($project_id, 'array', array($record), $fieldList);
-            $destinationData = \REDCap::getData(array(0=>$destinationProject,1=>'array',9=>'['.$recordFieldMapping.'] = '.$record));
 
             $emailValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$emailField]['form_name'],$emailField,$repeat_instance);
             $senderValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$senderField]['form_name'],$senderField,$repeat_instance);
             $subjectValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$subjectField]['form_name'],$subjectField,$repeat_instance);
             $sendDateValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$sendDateField]['form_name'],$sendDateField,$repeat_instance);
+            $mappingValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$recordFieldMapping]['form_name'],$recordFieldMapping,$repeat_instance);
 
             if ($languageMetaData['element_type'] == 'descriptive') {
                 $emailLanguage = $languageMetaData['element_label'];
@@ -120,14 +106,16 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                 $autoRecordID = "";
                 $emailInstance = 0;
                 $existingEmails = array();
+
                 foreach ($destinationData as $instanceData) {
-                    if ($instanceData[$projectObject->table_pk] != $record) continue;
+                    if ($instanceData[$recordFieldMapping] != $record) continue;
                     if ($instanceData['redcap_repeat_instance'] > $emailInstance) {
                         $emailInstance = $instanceData['redcap_repeat_instance'];
                     }
                     if (!in_array($instanceData[$destEmailField],$existingEmails)) {
                         $existingEmails[] = $instanceData[$destEmailField];
                     }
+                    $autoRecordID = $record;
                 }
                 $emailInstance++;
 
@@ -140,11 +128,15 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                     if (filter_var($email,FILTER_VALIDATE_EMAIL)) {
                         if (in_array($email,$existingEmails)) continue;
                         $existingEmails[] = $email;
-                        $hashInfo = $this->resetSurveyAndGetCodes($destinationProject,$autoRecordID,$surveyForm);
-                        $hash = $hashInfo['hash'];
-                        if ($hash != "") {
-                            $surveyLink = "<a href='https://".$_SERVER['SERVER_NAME']."/surveys/?s=".$hash."'>https://".$_SERVER['SERVER_NAME']."/surveys/?s=".$hash."</a>";
-                            $emailLanguage = str_replace("SURVEY_LINK",$surveyLink,$emailLanguage);
+                        /*$hashInfo = $this->resetSurveyAndGetCodes($destinationProject,$autoRecordID,$surveyForm);
+                        $hash = $hashInfo['hash'];*/
+
+                        $surveyLink =$this->passthruToSurvey($destinationProject,$autoRecordID,$projectObject->firstEventId,$surveyForm,true,$emailInstance);
+                        if ($surveyLink != "") {
+                            $messageLink = "<a href='$surveyLink'>$surveyLink</a>";
+                            $linkPart = explode("?s=",$surveyLink);
+                            $hash = $linkPart[count($linkPart) - 1];
+                            $emailLanguage = str_replace("SURVEY_LINK", $messageLink, $emailLanguage);
                             //$emailLanguage = preg_replace("/[^a-zA-Z0-9~!@#$%^&*()_+\/<>=\'\";:,\- ]+/", ' ', $emailLanguage);
                             #Remove weird character created through character encoding mismatch between Rich Text field and the mysql database creating Â characters from &nbsp;
                             $emailLanguage = str_replace(chr(194),'',$emailLanguage);
@@ -167,7 +159,15 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                     $sourceValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$sourceField]['form_name'],$sourceField,$repeat_instance);
 
                                     $instrumentRepeats = $projectObject->isRepeatingFormOrEvent($projectObject->firstEventId,$destFieldList[$sourceField]['form_name']);
-                                    $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$destField=>$sourceValue,$destEmailField=>$email));
+                                    $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId));
+                                    if (is_array($sourceValue)) {
+                                        foreach ($sourceValue as $index => $actualValue) {
+                                            $saveArray[$sourceIndex][$destField."___".$index] = $actualValue;
+                                        }
+                                    }
+                                    else {
+                                        $saveArray[$sourceIndex][$destField] = $sourceValue;
+                                    }
                                     if ($instrumentRepeats) {
                                         $saveArray[$sourceIndex]['redcap_repeat_instance'] = $emailInstance;
                                         $saveArray[$sourceIndex]['redcap_repeat_instrument'] = $destFieldList[$sourceField]['form_name'];
@@ -178,6 +178,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                         $saveArray[$sourceIndex][$destField] = $copyEdoc;
                                         $this->saveEdocIDToField($projectObject->project_id,$projectObject->firstEventId,$autoRecordID,$destField,$copyEdoc,$emailInstance);
                                     }
+
                                     $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                                 }
                             }
@@ -190,6 +191,16 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
                                 $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                             }
+                            if ($recordFieldMapping != "") {
+                                $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$recordFieldMapping=>$record));
+                                if ($instrumentRepeats) {
+                                    $saveArray[$sourceIndex]['redcap_repeat_instance'] = $emailInstance;
+                                    $saveArray[$sourceIndex]['redcap_repeat_instrument'] = $destFieldList[$sourceField]['form_name'];
+                                }
+
+                                $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
+                            }
+
                             $this->addSurveyToScheduler($autoRecordID,$email,$surveyId,$sendDate,$hash,$subjectValue,$emailLanguage,$senderValue);
                         }
                     }
@@ -284,5 +295,183 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         //echo "Instance is $instance<br/>";
         $this->query("INSERT INTO redcap_data (project_id, event_id, record, field_name, value, instance) 
 						VALUES (?, ?, ?, ?, ?, ?)",array($project_id,$event_id,$record,$field_name,$edocID,($instance == '1' ? NULL : $instance)));
+    }
+
+    private function getSurveyFormAndId($project_id, $formName = "") {
+        // Get survey_id, form status field, and save and return setting
+        $sql = "SELECT s.survey_id, s.form_name, s.save_and_return
+		 		FROM redcap_projects p, redcap_surveys s, redcap_metadata m
+					WHERE p.project_id = ".$project_id."
+						AND p.project_id = s.project_id
+						AND m.project_id = p.project_id
+						AND s.form_name = m.form_name
+						".($formName != "" ? (is_numeric($formName) ? "AND s.survey_id = '$formName'" : "AND s.form_name = '$formName'") : "")
+            ." LIMIT 1";
+
+        $q = db_query($sql);
+        $formName = db_result($q, 0, 'form_name');
+        $surveyId = db_result($q, 0, 'survey_id');
+
+        return array($formName, $surveyId);
+    }
+
+    private function passthruToSurvey($project_id, $record, $event_id, $surveyFormName = "", $dontCreateForm = false, $instance = "1", $dontResetSurvey = false) {
+        // Check to make sure instance is greater than or equal to 1.  Instance with value "" causes weird behavior i.e.  2 instances getting created with "" and 0.
+        $instance = is_numeric($instance) ? (int)$instance : 1;
+
+        // Get survey_id, form status field
+        list($surveyFormName, $surveyId) = $this->getSurveyFormAndId($project_id, $surveyFormName);
+
+        if($surveyId == "") {
+            if($dontCreateForm) {
+                return false;
+            }
+            else {
+                die("Error: Survey ID not found<br />{$record} : $surveyFormName<br />");
+            }
+        }
+
+
+        ## Search for a participant and response id for the given survey and record
+        $sql = "SELECT p.participant_id, p.hash, r.return_code, r.response_id, COALESCE(p.participant_email,'NULL') as participant_email
+				FROM redcap_surveys_participants p, redcap_surveys_response r
+				WHERE p.survey_id = '$surveyId'
+					AND p.participant_id = r.participant_id
+					AND r.record = '".prep($record)."'
+					AND r.instance='$instance'";
+        //echo "$sql<br/>";
+        $participantQuery = db_query($sql);
+        $rows = [];
+        while($row = db_fetch_assoc($participantQuery)) {
+            $rows[] = $row;
+        }
+        $participantId = $rows[0]['participant_id'];
+        $responseId = $rows[0]['response_id'];
+        ## Create participant and return code if doesn't exist yet
+        if($participantId == "" || $responseId == "") {
+
+            $hash = $this->generateUniqueRandomSurveyHash();
+            ## Insert a participant row for this survey
+            $sql = "INSERT INTO redcap_surveys_participants (survey_id, event_id, participant_email, participant_identifier, hash)
+					VALUES ($surveyId,".prep($event_id).", '', null, '$hash')";
+            //echo "$sql<br/>";
+            if(!db_query($sql)) echo "Error: ".db_error()." <br />$sql<br />";
+            $participantId = db_insert_id();
+
+            ## Insert a response row for this survey and record
+            $returnCode = generateRandomHash();
+
+            $sql = "INSERT INTO redcap_surveys_response (participant_id, record, instance, first_submit_time, return_code)
+					VALUES ($participantId, ".prep($record).", '$instance', NULL,'$returnCode')";
+
+            //echo "$sql<br/>";
+            if(!db_query($sql)) echo "Error: ".db_error()." <br />$sql<br />";
+            $responseId = db_insert_id();
+        }
+        ## Reset response status if it already exists
+        else {
+            ## If more than one exists, delete any that are responses to public survey links
+            if(db_num_rows($participantQuery) > 1) {
+                foreach($rows as $thisRow) {
+                    if($thisRow["participant_email"] == "NULL" && $thisRow["response_id"] != "") {
+                        $sql = "DELETE FROM redcap_surveys_response
+								WHERE response_id = ".$thisRow["response_id"];
+                        if(!db_query($sql)) echo "Error: ".db_error()." <br />$sql<br />";
+                    }
+                    else {
+                        $row = $thisRow;
+                    }
+                }
+            }
+            else {
+                $row = $rows[0];
+            }
+            $returnCode = $row['return_code'];
+            $hash = $row['hash'];
+            $participantId = "";
+
+            if($returnCode == "") {
+                $returnCode = generateRandomHash();
+            }
+
+            ## If this is only as a public survey link, generate new participant row
+            if($row["participant_email"] == "NULL") {
+                $hash = self::generateUniqueRandomSurveyHash();
+
+                ## Insert a participant row for this survey
+                $sql = "INSERT INTO redcap_surveys_participants (survey_id, event_id, participant_email, participant_identifier, hash)
+						VALUES ($surveyId,".prep($event_id).", '', null, '$hash')";
+
+                if(!db_query($sql)) echo "Error: ".db_error()." <br />$sql<br />";
+                $participantId = db_insert_id();
+            }
+
+            if($dontResetSurvey) {
+                // Only update returnCode if on public survey link
+                $sql = "UPDATE redcap_surveys_participants p, redcap_surveys_response r
+						SET r.return_code = '".prep($returnCode)."'".
+                    ($participantId == "" ? "" : ", r.participant_id = '$participantId'")."
+						WHERE p.survey_id = $surveyId
+							AND p.event_id = ".prep($event_id)."
+							AND r.participant_id = p.participant_id
+							AND r.record = '".prep($record)."'
+							AND r.instance = '$instance'";
+            }
+            else {
+                // Set the response as incomplete in the response table, update participantId if on public survey link
+                $sql = "UPDATE redcap_surveys_participants p, redcap_surveys_response r
+						SET r.completion_time = null,
+							r.first_submit_time = NULL,
+							r.return_code = '".prep($returnCode)."'".
+                    ($participantId == "" ? "" : ", r.participant_id = '$participantId'")."
+						WHERE p.survey_id = $surveyId
+							AND p.event_id = ".prep($event_id)."
+							AND r.participant_id = p.participant_id
+							AND r.record = '".prep($record)."'
+							AND r.instance = '$instance'";
+            }
+            db_query($sql);
+        }
+        $surveyLink = APP_PATH_SURVEY_FULL . "?s=$hash";
+
+        @db_query("COMMIT");
+
+        if($dontCreateForm) {
+            return $surveyLink;
+        }
+        else {
+            // Set the response as incomplete in the data table
+            $sql = "UPDATE redcap_data
+				SET value = '0'
+				WHERE project_id = ".prep($project_id)."
+					AND record = '".prep($record)."'
+					AND event_id = ".prep($event_id)."
+					AND field_name = '{$surveyFormName}_complete' 
+					AND instance =" . $instance;
+            $q = db_query($sql);
+            // Log the event (if value changed)
+            if ($q && db_affected_rows() > 0) {
+                if(function_exists("log_event")) {
+                    \log_event($sql,"redcap_data","UPDATE",$record,"{$surveyFormName}_complete = '0'","Update record");
+                }
+                else {
+                    \Logging::logEvent($sql,"redcap_data","UPDATE",$record,"{$surveyFormName}_complete = '0'","Update record");
+                }
+            }
+
+//			echo "Return $returnCode ~ $surveyLink <br />";
+            ## Build invisible self-submitting HTML form to get the user to the survey
+            echo "<html><body>
+				<form name='passthruform' action='$surveyLink' method='post' enctype='multipart/form-data'>
+				".($returnCode == "NULL" ? "" : "<input type='hidden' value='".$returnCode."' name='__code'/>")."
+				<input type='hidden' value='1' name='__prefill' />
+				</form>
+				<script type='text/javascript'>
+					document.passthruform.submit();
+				</script>
+				</body>
+				</html>";
+            return false;
+        }
     }
 }
