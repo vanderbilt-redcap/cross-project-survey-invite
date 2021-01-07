@@ -149,7 +149,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
                             if (is_numeric($timeOffset)) {
                                 $serverDate = strtotime($sendDate);
-                                $sendDate = gmdate("Y-d-m H:i:s", $serverDate+(intval($timeOffset)*60*60));
+                                $sendDate = gmdate("Y-m-d H:i:s", $serverDate+(intval($timeOffset)*60*60));
                             }
 
                             foreach ($sourceFieldList as $sourceIndex => $sourceField) {
