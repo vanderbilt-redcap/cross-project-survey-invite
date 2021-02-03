@@ -131,7 +131,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                         /*$hashInfo = $this->resetSurveyAndGetCodes($destinationProject,$autoRecordID,$surveyForm);
                         $hash = $hashInfo['hash'];*/
 
-                        $surveyLink =$this->passthruToSurvey($destinationProject,$autoRecordID,$projectObject->firstEventId,$surveyForm,true,$emailInstance);
+                        $surveyLink =$this->passthruToSurvey($destinationProject,db_real_escape_string($autoRecordID),$projectObject->firstEventId,db_real_escape_string($surveyForm),true,$emailInstance);
                         if ($surveyLink != "") {
                             $messageLink = "<a href='$surveyLink'>$surveyLink</a>";
                             $linkPart = explode("?s=",$surveyLink);
@@ -201,7 +201,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                 $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                             }
 
-                            $this->addSurveyToScheduler($autoRecordID,$email,$surveyId,$sendDate,$hash,$subjectValue,$emailLanguage,$senderValue);
+                            $this->addSurveyToScheduler($autoRecordID,$email,$surveyId,$sendDate,$hash,db_real_escape_string($subjectValue),db_real_escape_string($emailLanguage),db_real_escape_string($senderValue));
                         }
                     }
                     $emailInstance++;
@@ -234,14 +234,14 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $sql = "INSERT INTO redcap_surveys_emails (survey_id, email_subject, email_content, email_static, delivery_type)
         		VALUES ($surveyId, '".$subject."', '".str_replace("'","",$emailBody)."', '".$senderEmail."', 'EMAIL')";
         //echo "$sql<br/>";
-        if(!db_query($sql)) throw new \Exception("Error: ".db_error()." <br />$sql<br />");
+        if(!db_query($sql)) $this->log("Error: ".db_error()." <br />$sql<br />");
         $emailId = db_insert_id();
 
         ##insert into emails recipient table
         $sql = "INSERT INTO redcap_surveys_emails_recipients (email_id, participant_id, static_email, delivery_type)
                 VALUES ($emailId, $participantId, '{$emailAddress}', 'EMAIL')";
         //echo "$sql<br/>";
-        if(!db_query($sql)) throw new \Exception("Error: ".db_error()." <br />$sql<br />");
+        if(!db_query($sql)) $this->log("Error: ".db_error()." <br />$sql<br />");
         $e_r_id = db_insert_id();
 
         /*$sql = "SELECT email_recip_id
@@ -256,7 +256,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $sql = "INSERT INTO redcap_surveys_scheduler_queue (email_recip_id, reminder_num, record, scheduled_time_to_send, status)
                 VALUES ($e_r_id, '0', '{$recordID}','".$sendDate."' ,'QUEUED')";
         //echo "$sql<br/>";
-        if(!db_query($sql))  throw new \Exception("Error: ".db_error()." <br />$sql<br />");
+        if(!db_query($sql))  $this->log("Error: ".db_error()." <br />$sql<br />");
     }
 
     private static function copyEdoc($pid, $edocId)
@@ -294,7 +294,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         //$instance = ($instance == '1' ? "NULL" : $instance);
         //echo "Instance is $instance<br/>";
         $this->query("INSERT INTO redcap_data (project_id, event_id, record, field_name, value, instance) 
-						VALUES (?, ?, ?, ?, ?, ?)",array($project_id,$event_id,$record,$field_name,$edocID,($instance == '1' ? NULL : $instance)));
+						VALUES (?, ?, ?, ?, ?, ?)",array($project_id,$event_id,$record,db_real_escape_string($field_name),$edocID,($instance == '1' ? NULL : $instance)));
     }
 
     private function getSurveyFormAndId($project_id, $formName = "") {
@@ -320,14 +320,14 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $instance = is_numeric($instance) ? (int)$instance : 1;
 
         // Get survey_id, form status field
-        list($surveyFormName, $surveyId) = $this->getSurveyFormAndId($project_id, $surveyFormName);
+        list($surveyFormName, $surveyId) = $this->getSurveyFormAndId($project_id, db_real_escape_string($surveyFormName));
 
         if($surveyId == "") {
             if($dontCreateForm) {
                 return false;
             }
             else {
-                die("Error: Survey ID not found<br />{$record} : $surveyFormName<br />");
+                $this->log("Error: Survey ID not found<br />{$record} : $surveyFormName<br />");
             }
         }
 
