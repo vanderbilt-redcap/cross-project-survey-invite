@@ -201,7 +201,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                 $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                             }
 
-                            $this->addSurveyToScheduler($autoRecordID,$email,$surveyId,$sendDate,$hash,db_real_escape_string($subjectValue),db_real_escape_string($emailLanguage),db_real_escape_string($senderValue));
+                            $this->addSurveyToScheduler($autoRecordID,$email,$surveyId,$sendDate,$hash,db_real_escape_string($subjectValue),db_real_escape_string($emailLanguage),db_real_escape_string($senderValue),$emailInstance);
                         }
                     }
                     $emailInstance++;
@@ -224,7 +224,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         return "";
     }
 
-    function addSurveyToScheduler($recordID, $emailAddress, $surveyId, $sendDate, $hash, $subject, $emailBody, $senderEmail) {
+    function addSurveyToScheduler($recordID, $emailAddress, $surveyId, $sendDate, $hash, $subject, $emailBody, $senderEmail, $instance = '1') {
         $sql = "SELECT p.participant_id
 						FROM redcap_surveys_participants p
 						WHERE p.hash = '$hash'";
@@ -253,8 +253,8 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $e_r_id = db_fetch_array($query)[0];*/
 
         ##insert into the surveys scheduler queue table
-        $sql = "INSERT INTO redcap_surveys_scheduler_queue (email_recip_id, reminder_num, record, scheduled_time_to_send, status)
-                VALUES ($e_r_id, '0', '{$recordID}','".$sendDate."' ,'QUEUED')";
+        $sql = "INSERT INTO redcap_surveys_scheduler_queue (email_recip_id, reminder_num, record, instance, scheduled_time_to_send, status)
+                VALUES ($e_r_id, '0', '{$recordID}','{$instance}','".$sendDate."' ,'QUEUED')";
         //echo "$sql<br/>";
         if(!db_query($sql))  $this->log("Error: ".db_error()." <br />$sql<br />");
     }
