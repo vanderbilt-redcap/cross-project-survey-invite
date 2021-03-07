@@ -98,7 +98,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                     }
                 }
                 else {
-                    $emailsArray = explode(",", $emailValue);
+                    $emailsArray = explode(",", str_replace(' ','',$emailValue));
                 }
 
                 $dataParameters = array("project_id" => $destinationProject, "return_format" => 'json', "fields" => array($recordFieldMapping,$projectObject->table_pk,$destEmailField), "filterLogic" => "[".$recordFieldMapping."] = '".$record."'");
