@@ -115,18 +115,18 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                     if (!in_array($instanceData[$destEmailField],$existingEmails)) {
                         $existingEmails[] = $instanceData[$destEmailField];
                     }
-                    $autoRecordID = $record;
+                    $autoRecordID = $instanceData[$projectObject->table_pk];
                 }
-                $emailInstance++;
 
                 if ($autoRecordID == "") {
                     $autoRecordID = $this->addAutoNumberedRecord($destinationProject);
                 }
+                $emailInstance++;
 
                 foreach ($emailsArray as $emailIndex => $email) {
                     $email = trim($email);
                     if (filter_var($email,FILTER_VALIDATE_EMAIL)) {
-                        //if (in_array($email,$existingEmails)) continue;
+                        if (in_array($email,$existingEmails)) continue;
                         $existingEmails[] = $email;
                         /*$hashInfo = $this->resetSurveyAndGetCodes($destinationProject,$autoRecordID,$surveyForm);
                         $hash = $hashInfo['hash'];*/
