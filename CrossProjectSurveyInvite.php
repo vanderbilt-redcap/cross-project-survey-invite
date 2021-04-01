@@ -152,7 +152,6 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                 $serverDate = strtotime($sendDate);
                                 $sendDate = gmdate("Y-m-d H:i:s", $serverDate+(intval($timeOffset)*60*60));
                             }
-
                             foreach ($sourceFieldList as $sourceIndex => $sourceField) {
                                 if (isset($destFieldList[$sourceField])) {
                                     $destField = $destFieldList[$sourceField]['field_name'];
@@ -203,9 +202,9 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                             }
 
                             $this->addSurveyToScheduler($autoRecordID,$email,$surveyId,$sendDate,$hash,db_real_escape_string($subjectValue),db_real_escape_string($emailLanguage),db_real_escape_string($senderValue),$emailInstance);
+                            $emailInstance++;
                         }
                     }
-                    $emailInstance++;
                 }
             }
         }
@@ -233,7 +232,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $participantId = db_result(db_query($sql),0);
 
         $sql = "INSERT INTO redcap_surveys_emails (survey_id, email_subject, email_content, email_static, delivery_type)
-        		VALUES ($surveyId, '".$subject."', '".str_replace("'","",$emailBody)."', '".$senderEmail."', 'EMAIL')";
+        		VALUES ($surveyId, '".$subject."', '$emailBody', '".$senderEmail."', 'EMAIL')";
         //echo "$sql<br/>";
         if(!db_query($sql)) $this->log("Error: ".db_error()." <br />$sql<br />");
         $emailId = db_insert_id();
