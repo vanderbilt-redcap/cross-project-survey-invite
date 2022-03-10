@@ -155,7 +155,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                         $hash = $hashInfo['hash'];*/
 
                         $surveyLink =$this->passthruToSurvey($destinationProject,db_real_escape_string($autoRecordID),$projectObject->firstEventId,db_real_escape_string($surveyForm),true,$emailInstance);
-                        echo "Survey link: $surveyLink<br/>";
+
                         if ($surveyLink != "") {
                             $messageLink = "<a href='$surveyLink'>$surveyLink</a>";
                             $linkPart = explode("?s=",$surveyLink);
