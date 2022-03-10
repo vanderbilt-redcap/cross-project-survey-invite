@@ -8,22 +8,32 @@ use ExternalModules\ExternalModules;
 class CrossProjectSurveyInvite extends AbstractExternalModule
 {
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
-
+        /*$attributes = \Files::getEdocContentsAttributes(514);
+        echo "<pre>";
+        print_r($attributes);
+        echo "</pre>";
+        $lineSplit = explode("\n",$attributes[2]);
+        echo "<pre>";
+        print_r($lineSplit);
+        echo "</pre>";*/
     }
 
     function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id = NULL, $survey_hash = NULL, $response_id = NULL, $repeat_instance = 1) {
-        $emailFields = $this->getProjectSetting('email_field');
-        $destinationProjects = $this->getProjectSetting('destination_project');
-        $surveyForms = $this->getProjectSetting('survey_form');
-        $emailLanguages = $this->getProjectSetting('email_language');
-        $emailSenders = $this->getProjectSetting('email_sender');
-        $emailSubjects = $this->getProjectSetting('email_subject');
-        $sendDates = $this->getProjectSetting('send_date_field');
-        $sourceFields = $this->getProjectSetting('source-field');
-        $destFields = $this->getProjectSetting('destination-field');
-        $timeOffsets = $this->getProjectSetting('time_offset');
-        $destEmailFields = $this->getProjectSetting('email_pipe_field');
-        $recordFieldMappings = $this->getProjectSetting('record_id_mapping');
+        $emailFields = $this->getProjectSetting('email_field',$project_id);
+        $destinationProjects = $this->getProjectSetting('destination_project',$project_id);
+        $surveyForms = $this->getProjectSetting('survey_form',$project_id);
+        $emailLanguages = $this->getProjectSetting('email_language',$project_id);
+        $emailSenders = $this->getProjectSetting('email_sender',$project_id);
+        $emailSubjects = $this->getProjectSetting('email_subject',$project_id);
+        $supEmailLanguages = $this->getProjectSetting('sup_email_language',$project_id);
+        $supEmailSubjects = $this->getProjectSetting('sup_email_subject',$project_id);
+        $supEmailSenders = $this->getProjectSetting('sup_email_subject',$project_id);
+        $sendDates = $this->getProjectSetting('send_date_field',$project_id);
+        $sourceFields = $this->getProjectSetting('source-field',$project_id);
+        $destFields = $this->getProjectSetting('destination-field',$project_id);
+        $timeOffsets = $this->getProjectSetting('time_offset',$project_id);
+        $destEmailFields = $this->getProjectSetting('email_pipe_field',$project_id);
+        $recordFieldMappings = $this->getProjectSetting('record_id_mapping',$project_id);
 
         $currentProject = new \Project($project_id);
         $currentMetaData = $currentProject->metadata;
@@ -38,6 +48,9 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             $senderField = $emailSenders[$index];
             $languageField = $emailLanguages[$index];
             $subjectField = $emailSubjects[$index];
+            $supSubjectField = $supEmailSubjects[$index];
+            $supLanguageField = $supEmailLanguages[$index];
+            $supSenderField = $supEmailSenders[$index];
             $sendDateField = $sendDates[$index];
             $timeOffset = $timeOffsets[$index];
             $destEmailField = $destEmailFields[$index];
@@ -54,7 +67,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             $languageMetaData = $currentMetaData[$languageField];
             $emailMetaData = $currentMetaData[$emailField];
 
-            $fieldList = array($emailField,$senderField,$languageField,$subjectField,$sendDateField);
+            $fieldList = array($emailField,$senderField,$languageField,$subjectField,$sendDateField,$supSenderField,$supLanguageField,$supSubjectField);
             $destFieldList = array();
 
             foreach ($sourceFields[$index] as $subIndex => $sourceField) {
@@ -74,6 +87,9 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             $subjectValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$subjectField]['form_name'],$subjectField,$repeat_instance);
             $sendDateValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$sendDateField]['form_name'],$sendDateField,$repeat_instance);
             $mappingValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$recordFieldMapping]['form_name'],$recordFieldMapping,$repeat_instance);
+            $supSenderValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$supSenderField]['form_name'],$supSenderField,$repeat_instance);
+            $supLanguageValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$supLanguageField]['form_name'],$supLanguageField,$repeat_instance);
+            $supSubjectValue = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$supSubjectField]['form_name'],$supSubjectField,$repeat_instance);
 
             if ($languageMetaData['element_type'] == 'descriptive') {
                 $emailLanguage = $languageMetaData['element_label'];
@@ -82,17 +98,24 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                 $emailLanguage = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$languageField]['form_name'],$languageField,$repeat_instance);
             }
 
+            $emailLanguage = \Piping::replaceVariablesInLabel($emailLanguage,$record,$event_id,$repeat_instance,$currentData);
+
             $additionalParams = (filter_var($senderValue, FILTER_VALIDATE_EMAIL) ? "-f ".$senderValue : null);
 
             if ($emailValue != "" && $emailLanguage != "" && $subjectValue != "" && filter_var($senderValue,FILTER_VALIDATE_EMAIL)) {
                 if ($emailMetaData['element_type'] == "file") {
                     $emailsArray = array();
+                    $supEmailsArray = array();
                     $attributes = \Files::getEdocContentsAttributes($emailValue);
                     if ($attributes[0] == "text/plain" && substr($attributes[1],-3,3) == "csv") {
-                        $split = explode(",",$attributes[2]);
-                        foreach ($split as $email) {
-                            if (filter_var(trim($email),FILTER_VALIDATE_EMAIL)) {
-                                $emailsArray[] = trim($email);
+                        $lineSplit = explode("\n",$attributes[2]);
+                        foreach ($lineSplit as $lineNum => $commaEmails) {
+                            $split = explode(",", $commaEmails);
+                            if (filter_var(trim($split[0]), FILTER_VALIDATE_EMAIL)) {
+                                $emailsArray[$lineNum] = trim($split[0]);
+                            }
+                            if (filter_var(trim($split[1]), FILTER_VALIDATE_EMAIL)) {
+                                $supEmailsArray[$lineNum] = trim($split[1]);
                             }
                         }
                     }
@@ -132,6 +155,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                         $hash = $hashInfo['hash'];*/
 
                         $surveyLink =$this->passthruToSurvey($destinationProject,db_real_escape_string($autoRecordID),$projectObject->firstEventId,db_real_escape_string($surveyForm),true,$emailInstance);
+                        echo "Survey link: $surveyLink<br/>";
                         if ($surveyLink != "") {
                             $messageLink = "<a href='$surveyLink'>$surveyLink</a>";
                             $linkPart = explode("?s=",$surveyLink);
@@ -141,6 +165,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                             $emailLanguage = preg_replace("/[^a-zA-Z0-9~!@#$%^?&*{}\[\]()`\~|_+\/<>=\'\";\\\:.,\- ]+/", ' ', $emailLanguage);
                             #Remove weird character created through character encoding mismatch between Rich Text field and the mysql database creating Â characters from &nbsp;
                             $emailLanguage = str_replace(chr(194),'',$emailLanguage);
+
                             if ($sendDateField != "" && $sendDateValue != "") {
                                 $sendDate = date('Y-m-d H:i:s',strtotime($sendDateValue));
                             }
@@ -201,7 +226,18 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                 $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                             }
 
-                            $this->addSurveyToScheduler($autoRecordID,$email,$surveyId,$sendDate,$hash,db_real_escape_string($subjectValue),db_real_escape_string($emailLanguage),db_real_escape_string($senderValue),$emailInstance);
+                            if ($hash != "") {
+                                $this->addSurveyToScheduler($autoRecordID, $email, $surveyId, $sendDate, $hash, db_real_escape_string($subjectValue), db_real_escape_string($emailLanguage), db_real_escape_string($senderValue), $emailInstance);
+                                $supLanguageValue = \Piping::replaceVariablesInLabel($supLanguageValue,$record,$event_id,$repeat_instance,$currentData);
+                                $supLanguageValue = str_replace("PART_EMAIL", $email, $supLanguageValue);
+                                $supLanguageValue = preg_replace("/[^a-zA-Z0-9~!@#$%^?&*{}\[\]()`\~|_+\/<>=\'\";\\\:.,\- ]+/", ' ', $supLanguageValue);
+                                #Remove weird character created through character encoding mismatch between Rich Text field and the mysql database creating Â characters from &nbsp;
+                                $supLanguageValue = str_replace(chr(194),'',$supLanguageValue);
+
+                                if ($supLanguageValue != "" && $supSenderValue != "" && $supSubjectValue != "" && $supEmailsArray[$emailIndex] != "") {
+                                    $this->addSurveyToScheduler($autoRecordID, $supEmailsArray[$emailIndex], $surveyId, $sendDate, $hash, db_real_escape_string($supSubjectValue), db_real_escape_string($supLanguageValue), db_real_escape_string($supSenderValue), $emailInstance, 0);
+                                }
+                            }
                             $emailInstance++;
                         }
                     }
@@ -224,15 +260,15 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         return "";
     }
 
-    function addSurveyToScheduler($recordID, $emailAddress, $surveyId, $sendDate, $hash, $subject, $emailBody, $senderEmail, $instance = '1') {
+    function addSurveyToScheduler($recordID, $emailAddress, $surveyId, $sendDate, $hash, $subject, $emailBody, $senderEmail, $instance = '1', $appendSurveyLink = 1) {
         $sql = "SELECT p.participant_id
 						FROM redcap_surveys_participants p
 						WHERE p.hash = '$hash'";
         //echo "$sql<br/>";
         $participantId = db_result(db_query($sql),0);
 
-        $sql = "INSERT INTO redcap_surveys_emails (survey_id, email_subject, email_content, email_static, delivery_type)
-        		VALUES ($surveyId, '".$subject."', '$emailBody', '".$senderEmail."', 'EMAIL')";
+        $sql = "INSERT INTO redcap_surveys_emails (survey_id, email_subject, email_content, email_static, delivery_type, append_survey_link)
+        		VALUES ($surveyId, '".$subject."', '$emailBody', '".$senderEmail."', 'EMAIL', '".$appendSurveyLink."')";
         //echo "$sql<br/>";
         if(!db_query($sql)) $this->log("Error: ".db_error()." <br />$sql<br />");
         $emailId = db_insert_id();

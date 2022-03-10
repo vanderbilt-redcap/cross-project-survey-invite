@@ -85,6 +85,21 @@
           "type": "text"
         },
         {
+          "key": "sup_email_sender",
+          "name": "Optional: Field with Email Sender for Supervisor Emails",
+          "type": "field-list"
+        },
+        {
+          "key": "sup_email_subject",
+          "name": "Optional: Field With Subject Line for Supervisor Email",
+          "type": "field-list"
+        },
+        {
+          "key": "sup_email_language",
+          "name": "Optional: Field for Email Language to Participant's Supervisor",
+          "type": "field-list"
+        },
+        {
           "key": "pipe-data-fields",
           "name": "Data Fields to Pipe to Destination Survey",
           "type": "sub_settings",
