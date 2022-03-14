@@ -114,8 +114,11 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                             if (filter_var(trim($split[0]), FILTER_VALIDATE_EMAIL)) {
                                 $emailsArray[$lineNum] = trim($split[0]);
                             }
-                            if (filter_var(trim($split[1]), FILTER_VALIDATE_EMAIL)) {
-                                $supEmailsArray[$lineNum] = trim($split[1]);
+                            $supEmailsArray[$lineNum] = array();
+                            for ($i = 1; $i < count($split); $i++) {
+                                if (filter_var(trim($split[$i]), FILTER_VALIDATE_EMAIL)) {
+                                    $supEmailsArray[$lineNum][] = trim($split[$i]);
+                                }
                             }
                         }
                     }
@@ -234,8 +237,10 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                 #Remove weird character created through character encoding mismatch between Rich Text field and the mysql database creating Â characters from &nbsp;
                                 $supSendLanguage = str_replace(chr(194),'',$supSendLanguage);
 
-                                if ($supLanguageValue != "" && $supSenderValue != "" && $supSubjectValue != "" && $supEmailsArray[$emailIndex] != "") {
-                                    $this->addSurveyToScheduler($autoRecordID, $supEmailsArray[$emailIndex], $surveyId, $sendDate, $hash, db_real_escape_string($supSubjectValue), db_real_escape_string($supSendLanguage), db_real_escape_string($supSenderValue), $emailInstance, 0);
+                                if ($supLanguageValue != "" && $supSenderValue != "" && $supSubjectValue != "" && !empty($supEmailsArray[$emailIndex])) {
+                                    foreach ($supEmailsArray[$emailIndex] as $supEmail) {
+                                        $this->addSurveyToScheduler($autoRecordID, $supEmail, $surveyId, $sendDate, $hash, db_real_escape_string($supSubjectValue), db_real_escape_string($supSendLanguage), db_real_escape_string($supSenderValue), $emailInstance, 0);
+                                    }
                                 }
                             }
                             $emailInstance++;
