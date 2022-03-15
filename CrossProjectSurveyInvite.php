@@ -27,7 +27,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $emailSubjects = $this->getProjectSetting('email_subject',$project_id);
         $supEmailLanguages = $this->getProjectSetting('sup_email_language',$project_id);
         $supEmailSubjects = $this->getProjectSetting('sup_email_subject',$project_id);
-        $supEmailSenders = $this->getProjectSetting('sup_email_subject',$project_id);
+        $supEmailSenders = $this->getProjectSetting('sup_email_sender',$project_id);
         $sendDates = $this->getProjectSetting('send_date_field',$project_id);
         $sourceFields = $this->getProjectSetting('source-field',$project_id);
         $destFields = $this->getProjectSetting('destination-field',$project_id);
@@ -107,6 +107,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                     $emailsArray = array();
                     $supEmailsArray = array();
                     $attributes = \Files::getEdocContentsAttributes($emailValue);
+
                     if ($attributes[0] == "text/plain" && substr($attributes[1],-3,3) == "csv") {
                         $lineSplit = explode("\n",$attributes[2]);
                         foreach ($lineSplit as $lineNum => $commaEmails) {
