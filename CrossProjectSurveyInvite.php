@@ -165,6 +165,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                             $linkPart = explode("?s=",$surveyLink);
                             $hash = $linkPart[count($linkPart) - 1];
                             $sendLanguage = str_replace("SURVEY_LINK", $messageLink, $emailLanguage);
+                            $sendLanguage = str_replace("PART_EMAIL", $email, $sendLanguage);
 
                             $sendLanguage = preg_replace("/[^a-zA-Z0-9~!@#$%^?&*{}\[\]()`\~|_+\/<>=\'\";\\\:.,\- ]+/", ' ', $sendLanguage);
                             #Remove weird character created through character encoding mismatch between Rich Text field and the mysql database creating Â characters from &nbsp;
@@ -234,6 +235,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                 $this->addSurveyToScheduler($autoRecordID, $email, $surveyId, $sendDate, $hash, db_real_escape_string($subjectValue), db_real_escape_string($sendLanguage), db_real_escape_string($senderValue), $emailInstance);
                                 $supSendLanguage = \Piping::replaceVariablesInLabel($supLanguageValue,$record,$event_id,$repeat_instance,$currentData);
                                 $supSendLanguage = str_replace("PART_EMAIL", $email, $supSendLanguage);
+                                $supSendLanguage = str_replace("SURVEY_LINK", $messageLink, $supSendLanguage);
                                 $supSendLanguage = preg_replace("/[^a-zA-Z0-9~!@#$%^?&*{}\[\]()`\~|_+\/<>=\'\";\\\:.,\- ]+/", ' ', $supSendLanguage);
                                 #Remove weird character created through character encoding mismatch between Rich Text field and the mysql database creating Â characters from &nbsp;
                                 $supSendLanguage = str_replace(chr(194),'',$supSendLanguage);
