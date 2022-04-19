@@ -33,6 +33,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $destFields = $this->getProjectSetting('destination-field',$project_id);
         $timeOffsets = $this->getProjectSetting('time_offset',$project_id);
         $destEmailFields = $this->getProjectSetting('email_pipe_field',$project_id);
+        $supDestEmailFields = $this->getProjectSetting('sup_email_pipe_field',$project_id);
         $recordFieldMappings = $this->getProjectSetting('record_id_mapping',$project_id);
 
         $currentProject = new \Project($project_id);
@@ -54,6 +55,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             $sendDateField = $sendDates[$index];
             $timeOffset = $timeOffsets[$index];
             $destEmailField = $destEmailFields[$index];
+            $supDestEmailField = $supDestEmailFields[$index];
             $recordFieldMapping = $recordFieldMappings[$index];
 
             $projectObject = new \Project($destinationProject);
@@ -243,6 +245,15 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                                 if ($supLanguageValue != "" && $supSenderValue != "" && $supSubjectValue != "" && !empty($supEmailsArray[$emailIndex])) {
                                     foreach ($supEmailsArray[$emailIndex] as $supEmail) {
                                         $this->addSurveyToScheduler($autoRecordID, $supEmail, $surveyId, $sendDate, $hash, db_real_escape_string($supSubjectValue), db_real_escape_string($supSendLanguage), db_real_escape_string($supSenderValue), $emailInstance, 0);
+                                    }
+                                    if ($supDestEmailField != "" && in_array($supDestEmailField,array_keys($destMeta))) {
+                                        $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$supDestEmailField=>implode(",",$supEmailsArray)));
+                                        if ($instrumentRepeats) {
+                                            $saveArray[$sourceIndex]['redcap_repeat_instance'] = $emailInstance;
+                                            $saveArray[$sourceIndex]['redcap_repeat_instrument'] = $destMeta[$supDestEmailField]['form_name'];
+                                        }
+
+                                        $destResult = \REDCap::saveData($destinationProject,'json',json_encode($saveArray));
                                     }
                                 }
                             }

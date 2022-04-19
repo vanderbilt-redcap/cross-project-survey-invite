@@ -80,6 +80,11 @@
           "type": "text"
         },
         {
+          "key": "sup_email_pipe_field",
+          "name": "Optional: Field in Destination Project to Store Supervisor Email",
+          "type": "text"
+        },
+        {
           "key": "record_id_mapping",
           "name": "Optional: Field in Destination Project to Store the Record ID from this Project",
           "type": "text"
