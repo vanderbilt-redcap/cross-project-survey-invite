@@ -39,6 +39,8 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         $currentProject = new \Project($project_id);
         $currentMetaData = $currentProject->metadata;
 
+        $fieldsToEmpty = array();
+
         // Set content-type header for sending HTML email
         $headers = "MIME-Version: 1.0" . "\r\n";
         $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
@@ -98,6 +100,10 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             }
             else {
                 $emailLanguage = $this->getFieldValue($currentData,$record,$event_id,$currentMetaData[$languageField]['form_name'],$languageField,$repeat_instance);
+            }
+
+            if (!isset($fieldsToEmpty[$emailField])) {
+                $fieldsToEmpty[$emailField] = $emailValue;
             }
 
             $emailLanguage = \Piping::replaceVariablesInLabel($emailLanguage,$record,$event_id,$repeat_instance,$currentData);
@@ -260,6 +266,23 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                             $emailInstance++;
                         }
                     }
+                }
+            }
+        }
+
+        foreach ($fieldsToEmpty as $name => $value) {
+            $fieldInstrument = $currentMetaData[$name]['form_name'];
+            $saveEmptyEmails[0] = array(
+                $currentProject->table_pk => $record,'redcap_repeat_instrument' => $fieldInstrument,
+                'redcap_repeat_instance'=>$repeat_instance
+            );
+            $saveEmptyEmails[0][$name] = '';
+            $saveEmptyEmails[0]['sirb_within_21'] = '';
+
+            $emptyResult = \REDCap::saveData($project_id,'json',json_encode($saveEmptyEmails),'overwrite');
+            if ($emptyResult['errors'] == "") {
+                if ($currentMetaData[$name]['element_type'] == "file") {
+                    $fileDelete = \Files::deleteFileByDocId($value);
                 }
             }
         }
