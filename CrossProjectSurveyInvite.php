@@ -138,6 +138,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
                 $dataParameters = array("project_id" => $destinationProject, "return_format" => 'json', "fields" => array($recordFieldMapping,$projectObject->table_pk,$destEmailField), "filterLogic" => "[".$recordFieldMapping."] = '".$record."'");
                 $destinationData = json_decode(\REDCap::getData($dataParameters),true);
+
                 $autoRecordID = "";
                 $emailInstance = 0;
                 $existingEmails = array();
@@ -166,7 +167,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                         /*$hashInfo = $this->resetSurveyAndGetCodes($destinationProject,$autoRecordID,$surveyForm);
                         $hash = $hashInfo['hash'];*/
 
-                        $surveyLink =$this->passthruToSurvey($destinationProject,db_real_escape_string($autoRecordID),$projectObject->firstEventId,db_real_escape_string($surveyForm),true,$emailInstance);
+                        $surveyLink = $this->passthruToSurvey($destinationProject,db_real_escape_string($autoRecordID),$projectObject->firstEventId,db_real_escape_string($surveyForm),true,$emailInstance);
 
                         if ($surveyLink != "") {
                             $messageLink = "<a href='$surveyLink'>$surveyLink</a>";
@@ -277,9 +278,9 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                 'redcap_repeat_instance'=>$repeat_instance
             );
             $saveEmptyEmails[0][$name] = '';
-            $saveEmptyEmails[0]['sirb_within_21'] = '';
 
             $emptyResult = \REDCap::saveData($project_id,'json',json_encode($saveEmptyEmails),'overwrite');
+
             if ($emptyResult['errors'] == "") {
                 if ($currentMetaData[$name]['element_type'] == "file") {
                     $fileDelete = \Files::deleteFileByDocId($value);
