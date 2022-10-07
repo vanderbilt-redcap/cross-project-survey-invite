@@ -281,7 +281,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
             $emptyResult = \REDCap::saveData($project_id,'json',json_encode($saveEmptyEmails),'overwrite');
 
-            if ($emptyResult['errors'] == "") {
+            if (empty($emptyResult['errors'])) {
                 if ($currentMetaData[$name]['element_type'] == "file") {
                     $fileDelete = \Files::deleteFileByDocId($value);
                 }
