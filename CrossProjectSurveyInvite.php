@@ -241,7 +241,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                             }
 
                             if ($hash != "") {
-                                $this->addSurveyToScheduler($autoRecordID, $email, $surveyId, $sendDate, $hash, db_real_escape_string($subjectValue), db_real_escape_string($sendLanguage), db_real_escape_string($senderValue), $emailInstance);
+                                $this->addSurveyToScheduler($autoRecordID, $email, $surveyId, $sendDate, $hash, $subjectValue, $sendLanguage, $senderValue, $emailInstance);
                                 $supSendLanguage = \Piping::replaceVariablesInLabel($supLanguageValue,$record,$event_id,$repeat_instance,$currentData);
                                 $supSendLanguage = str_replace("PART_EMAIL", $email, $supSendLanguage);
                                 $supSendLanguage = str_replace("SURVEY_LINK", $messageLink, $supSendLanguage);
@@ -251,7 +251,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
                                 if ($supLanguageValue != "" && $supSenderValue != "" && $supSubjectValue != "" && !empty($supEmailsArray[$emailIndex])) {
                                     foreach ($supEmailsArray[$emailIndex] as $supEmail) {
-                                        $this->addSurveyToScheduler($autoRecordID, $supEmail, $surveyId, $sendDate, $hash, db_real_escape_string($supSubjectValue), db_real_escape_string($supSendLanguage), db_real_escape_string($supSenderValue), $emailInstance, 0);
+                                        $this->addSurveyToScheduler($autoRecordID, $supEmail, $surveyId, $sendDate, $hash, $supSubjectValue, $supSendLanguage, $supSenderValue, $emailInstance, 0);
                                     }
                                     if ($supDestEmailField != "" && in_array($supDestEmailField,array_keys($destMeta))) {
                                         $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$supDestEmailField=>implode(",",$supEmailsArray[$emailIndex])));
@@ -304,38 +304,25 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
     }
 
     function addSurveyToScheduler($recordID, $emailAddress, $surveyId, $sendDate, $hash, $subject, $emailBody, $senderEmail, $instance = '1', $appendSurveyLink = 1) {
-        $sql = "SELECT p.participant_id
-						FROM redcap_surveys_participants p
-						WHERE p.hash = '$hash'";
-        //echo "$sql<br/>";
-        $participantId = db_result(db_query($sql),0);
+        // Escaping values which may cause database issues
+        $emailAddress = db_real_escape_string($emailAddress);
 
-        $sql = "INSERT INTO redcap_surveys_emails (survey_id, email_subject, email_content, email_static, delivery_type, append_survey_link)
-        		VALUES ($surveyId, '".$subject."', '$emailBody', '".$senderEmail."', 'EMAIL', '".$appendSurveyLink."')";
-        //echo "$sql<br/>";
-        if(!db_query($sql)) $this->log("Error: ".db_error()." <br />$sql<br />");
+        $participantId = db_result($this->query("SELECT p.participant_id
+						FROM redcap_surveys_participants p
+						WHERE p.hash = ?",[$hash]),0);
+
+        $eIDInsert = $this->query("INSERT INTO redcap_surveys_emails (survey_id, email_subject, email_content, email_static, delivery_type, append_survey_link)
+        		VALUES (?, ?, ?, ?, 'EMAIL', ?)",[$surveyId,$subject,$emailBody,$senderEmail,$appendSurveyLink]);
         $emailId = db_insert_id();
 
         ##insert into emails recipient table
-        $sql = "INSERT INTO redcap_surveys_emails_recipients (email_id, participant_id, static_email, delivery_type)
-                VALUES ($emailId, $participantId, '{$emailAddress}', 'EMAIL')";
-        //echo "$sql<br/>";
-        if(!db_query($sql)) $this->log("Error: ".db_error()." <br />$sql<br />");
+        $recipIDInsert = $this->query("INSERT INTO redcap_surveys_emails_recipients (email_id, participant_id, static_email, delivery_type)
+                VALUES (?, ?, ?, 'EMAIL')",[$emailId,$participantId,$emailAddress]);
         $e_r_id = db_insert_id();
 
-        /*$sql = "SELECT email_recip_id
-				FROM redcap_surveys_emails_recipients
-				WHERE participant_id = $participantId";
-        //echo "$sql<br/>";
-        $query = db_query($sql);
-
-        $e_r_id = db_fetch_array($query)[0];*/
-
         ##insert into the surveys scheduler queue table
-        $sql = "INSERT INTO redcap_surveys_scheduler_queue (email_recip_id, reminder_num, record, instance, scheduled_time_to_send, status)
-                VALUES ($e_r_id, '0', '{$recordID}','{$instance}','".$sendDate."' ,'QUEUED')";
-        //echo "$sql<br/>";
-        if(!db_query($sql))  $this->log("Error: ".db_error()." <br />$sql<br />");
+        $schedulerInsert = $this->query("INSERT INTO redcap_surveys_scheduler_queue (email_recip_id, reminder_num, record, instance, scheduled_time_to_send, status)
+                VALUES (?, '0', ?, ?, ?,'QUEUED')",[$e_r_id,$recordID,$instance,$sendDate]);
     }
 
     private static function copyEdoc($pid, $edocId)
