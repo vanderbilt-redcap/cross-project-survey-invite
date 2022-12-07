@@ -304,9 +304,6 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
     }
 
     function addSurveyToScheduler($recordID, $emailAddress, $surveyId, $sendDate, $hash, $subject, $emailBody, $senderEmail, $instance = '1', $appendSurveyLink = 1) {
-        // Escaping values which may cause database issues
-        $emailAddress = db_real_escape_string($emailAddress);
-
         $participantId = db_result($this->query("SELECT p.participant_id
 						FROM redcap_surveys_participants p
 						WHERE p.hash = ?",[$hash]),0);
