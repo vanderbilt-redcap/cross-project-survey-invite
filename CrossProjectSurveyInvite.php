@@ -163,7 +163,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                 foreach ($emailsArray as $emailIndex => $email) {
                     $email = trim($email);
                     if (filter_var($email,FILTER_VALIDATE_EMAIL)) {
-                        //if (in_array($email,$existingEmails)) continue;
+                        if (in_array($email,$existingEmails)) continue;
                         $existingEmails[] = $email;
                         /*$hashInfo = $this->resetSurveyAndGetCodes($destinationProject,$autoRecordID,$surveyForm);
                         $hash = $hashInfo['hash'];*/
@@ -284,7 +284,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
             if (empty($emptyResult['errors'])) {
                 if ($currentMetaData[$name]['element_type'] == "file") {
-                    $fileDelete = \Files::deleteFileByDocId($value);
+                    $fileDelete = $this->setFileToDelete(intval($value),intval($project_id));
                 }
             }
         }
@@ -542,5 +542,13 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 				</html>";
             return false;
         }
+    }
+
+    private function setFileToDelete($doc_id,$project_id) {
+        if (!is_integer($doc_id) || !is_integer($project_id)) return false;
+
+        $result = $this->query("UPDATE redcap_edocs_metadata SET delete_date = '".NOW."' WHERE doc_id = ? AND delete_date IS NULL AND project_id = ?",
+                    [$doc_id,$project_id]);
+        return $result;
     }
 }
