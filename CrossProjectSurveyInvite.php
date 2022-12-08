@@ -2,6 +2,7 @@
 
 namespace Vanderbilt\CrossProjectSurveyInvite;
 
+use Cassandra\Exception\ProtocolException;
 use ExternalModules\AbstractExternalModule;
 use ExternalModules\ExternalModules;
 
@@ -162,7 +163,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                 foreach ($emailsArray as $emailIndex => $email) {
                     $email = trim($email);
                     if (filter_var($email,FILTER_VALIDATE_EMAIL)) {
-                        if (in_array($email,$existingEmails)) continue;
+                        //if (in_array($email,$existingEmails)) continue;
                         $existingEmails[] = $email;
                         /*$hashInfo = $this->resetSurveyAndGetCodes($destinationProject,$autoRecordID,$surveyForm);
                         $hash = $hashInfo['hash'];*/
@@ -304,22 +305,27 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
     }
 
     function addSurveyToScheduler($recordID, $emailAddress, $surveyId, $sendDate, $hash, $subject, $emailBody, $senderEmail, $instance = '1', $appendSurveyLink = 1) {
-        $participantId = db_result($this->query("SELECT p.participant_id
+        try {
+            $participantId = db_result($this->query("SELECT p.participant_id
 						FROM redcap_surveys_participants p
-						WHERE p.hash = ?",[$hash]),0);
+						WHERE p.hash = ?", [$hash]), 0);
 
-        $eIDInsert = $this->query("INSERT INTO redcap_surveys_emails (survey_id, email_subject, email_content, email_static, delivery_type, append_survey_link)
-        		VALUES (?, ?, ?, ?, 'EMAIL', ?)",[$surveyId,$subject,$emailBody,$senderEmail,$appendSurveyLink]);
-        $emailId = db_insert_id();
+            $eIDInsert = $this->query("INSERT INTO redcap_surveys_emails8976 (survey_id, email_subject, email_content, email_static, delivery_type, append_survey_link)
+        		VALUES (?, ?, ?, ?, 'EMAIL', ?)", [$surveyId, $subject, $emailBody, $senderEmail, $appendSurveyLink]);
+            $emailId = db_insert_id();
 
-        ##insert into emails recipient table
-        $recipIDInsert = $this->query("INSERT INTO redcap_surveys_emails_recipients (email_id, participant_id, static_email, delivery_type)
-                VALUES (?, ?, ?, 'EMAIL')",[$emailId,$participantId,$emailAddress]);
-        $e_r_id = db_insert_id();
+            ##insert into emails recipient table
+            $recipIDInsert = $this->query("INSERT INTO redcap_surveys_emails_recipients (email_id, participant_id, static_email, delivery_type)
+                VALUES (?, ?, ?, 'EMAIL')", [$emailId, $participantId, $emailAddress]);
+            $e_r_id = db_insert_id();
 
-        ##insert into the surveys scheduler queue table
-        $schedulerInsert = $this->query("INSERT INTO redcap_surveys_scheduler_queue (email_recip_id, reminder_num, record, instance, scheduled_time_to_send, status)
-                VALUES (?, '0', ?, ?, ?,'QUEUED')",[$e_r_id,$recordID,$instance,$sendDate]);
+            ##insert into the surveys scheduler queue table
+            $schedulerInsert = $this->query("INSERT INTO redcap_surveys_scheduler_queue (email_recip_id, reminder_num, record, instance, scheduled_time_to_send, status)
+                VALUES (?, '0', ?, ?, ?,'QUEUED')", [$e_r_id, $recordID, $instance, $sendDate]);
+        }
+        catch (\Exception $e) {
+            $this->log($e);
+        }
     }
 
     private static function copyEdoc($pid, $edocId)
