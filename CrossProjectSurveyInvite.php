@@ -310,7 +310,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 						FROM redcap_surveys_participants p
 						WHERE p.hash = ?", [$hash]), 0);
 
-            $eIDInsert = $this->query("INSERT INTO redcap_surveys_emails8976 (survey_id, email_subject, email_content, email_static, delivery_type, append_survey_link)
+            $eIDInsert = $this->query("INSERT INTO redcap_surveys_emails (survey_id, email_subject, email_content, email_static, delivery_type, append_survey_link)
         		VALUES (?, ?, ?, ?, 'EMAIL', ?)", [$surveyId, $subject, $emailBody, $senderEmail, $appendSurveyLink]);
             $emailId = db_insert_id();
 
