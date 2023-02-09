@@ -422,7 +422,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         }
         $participantId = $rows[0]['participant_id'];
         $responseId = $rows[0]['response_id'];
-        echo "Part ID $participantId and response $responseId<br/>";
+
         ## Create participant and return code if doesn't exist yet
         if($participantId == "" || $responseId == "") {
 
@@ -551,7 +551,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         if (!is_integer($doc_id) || !is_integer($project_id)) return false;
 
         $result = $this->query("UPDATE redcap_edocs_metadata SET delete_date = '".NOW."' WHERE doc_id = ? AND delete_date IS NULL AND project_id = ?",
-                    [$doc_id,$project_id]);
+            [$doc_id,$project_id]);
         return $result;
     }
 }
