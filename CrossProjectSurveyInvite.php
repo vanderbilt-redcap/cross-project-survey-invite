@@ -407,14 +407,14 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         ## Search for a participant and response id for the given survey and record
         $sql = "SELECT p.participant_id, p.hash, r.return_code, r.response_id, COALESCE(p.participant_email,'NULL') as participant_email
 				FROM redcap_surveys_participants p, redcap_surveys_response r
-				WHERE p.survey_id = '$surveyId'
+				WHERE p.survey_id = ?
 					AND p.participant_id = r.participant_id
-					AND r.record = '".prep($record)."'
-					AND r.instance='$instance'";
-        //echo "$sql<br/>";
-        $participantQuery = db_query($sql);
+					AND r.record = ?
+					AND r.instance=?";
+        $partResult = ExternalModules::query($sql, [$surveyId,prep($record),$instance]);
+
         $rows = [];
-        while($row = db_fetch_assoc($participantQuery)) {
+        while ($row = $partResult->fetch_assoc()) {
             $rows[] = $row;
         }
         $participantId = $rows[0]['participant_id'];
@@ -425,17 +425,16 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             $hash = $this->generateUniqueRandomSurveyHash();
             ## Insert a participant row for this survey
             $sql = "INSERT INTO redcap_surveys_participants (survey_id, event_id, participant_email, participant_identifier, hash)
-					VALUES ($surveyId,".prep($event_id).", '', null, '$hash')";
-            //echo "$sql<br/>";
-            if(!db_query($sql)) echo "Error: ".db_error()." <br />$sql<br />";
+					VALUES (?,?, '', null, ?)";
+            $result = ExternalModules::query($sql,[$surveyId,prep($event_id),$hash]);
             $participantId = db_insert_id();
 
             ## Insert a response row for this survey and record
             $returnCode = generateRandomHash();
 
             $sql = "INSERT INTO redcap_surveys_response (participant_id, record, instance, first_submit_time, return_code)
-					VALUES ($participantId, ".prep($record).", '$instance', NULL,'$returnCode')";
-
+					VALUES (?, ?, ?, NULL, ?)";
+            $result = ExternalModules::query($sql,[$participantId,prep($record),$instance,$returnCode]);
             //echo "$sql<br/>";
             if(!db_query($sql)) echo "Error: ".db_error()." <br />$sql<br />";
             $responseId = db_insert_id();
@@ -443,12 +442,12 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         ## Reset response status if it already exists
         else {
             ## If more than one exists, delete any that are responses to public survey links
-            if(db_num_rows($participantQuery) > 1) {
+            if($partResult->num_rows > 1) {
                 foreach($rows as $thisRow) {
                     if($thisRow["participant_email"] == "NULL" && $thisRow["response_id"] != "") {
                         $sql = "DELETE FROM redcap_surveys_response
-								WHERE response_id = ".$thisRow["response_id"];
-                        if(!db_query($sql)) echo "Error: ".db_error()." <br />$sql<br />";
+								WHERE response_id = ?";
+                        $deleteResult = ExternalModules::query($sql,[$thisRow["response_id"]]);
                     }
                     else {
                         $row = $thisRow;
@@ -472,9 +471,8 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
                 ## Insert a participant row for this survey
                 $sql = "INSERT INTO redcap_surveys_participants (survey_id, event_id, participant_email, participant_identifier, hash)
-						VALUES ($surveyId,".prep($event_id).", '', null, '$hash')";
-
-                if(!db_query($sql)) echo "Error: ".db_error()." <br />$sql<br />";
+						VALUES (?,?, '', null, ?)";
+                $insertPart = ExternalModules::query($sql,[$surveyId,prep($event_id),$hash]);
                 $participantId = db_insert_id();
             }
 
