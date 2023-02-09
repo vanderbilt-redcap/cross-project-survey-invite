@@ -8,6 +8,9 @@ use ExternalModules\ExternalModules;
 
 class CrossProjectSurveyInvite extends AbstractExternalModule
 {
+    const VALIDCSVMIMES = array("text/plain","text/x-csv","application/vnd.ms-excel","application/csv","application/x-csv",
+        "text/csv","text/comma-separated-values","text/x-comma-separated-values","text/tab-separated-values");
+
     function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id = NULL, $repeat_instance = 1) {
         /*$attributes = \Files::getEdocContentsAttributes(514);
         echo "<pre>";
@@ -117,7 +120,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
                     $supEmailsArray = array();
                     $attributes = \Files::getEdocContentsAttributes($emailValue);
 
-                    if ($attributes[0] == "text/plain" && substr($attributes[1],-3,3) == "csv") {
+                    if (in_array($attributes[0],self::VALIDCSVMIMES) && substr($attributes[1],-3,3) == "csv") {
                         $lineSplit = explode("\n",$attributes[2]);
                         foreach ($lineSplit as $lineNum => $commaEmails) {
                             $split = explode(",", $commaEmails);
