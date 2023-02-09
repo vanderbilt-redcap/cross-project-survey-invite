@@ -122,15 +122,18 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
                     if (in_array($attributes[0],self::VALIDCSVMIMES) && substr($attributes[1],-3,3) == "csv") {
                         $lineSplit = explode("\n",$attributes[2]);
+
                         foreach ($lineSplit as $lineNum => $commaEmails) {
                             $split = explode(",", $commaEmails);
-                            if (filter_var(trim($split[0]), FILTER_VALIDATE_EMAIL)) {
-                                $emailsArray[$lineNum] = trim($split[0]);
+                            $checkEmail = filter_var(trim($split[0]),FILTER_SANITIZE_EMAIL);
+                            if (filter_var($checkEmail, FILTER_VALIDATE_EMAIL)) {
+                                $emailsArray[$lineNum] = $checkEmail;
                             }
                             $supEmailsArray[$lineNum] = array();
                             for ($i = 1; $i < count($split); $i++) {
-                                if (filter_var(trim($split[$i]), FILTER_VALIDATE_EMAIL)) {
-                                    $supEmailsArray[$lineNum][] = trim($split[$i]);
+                                $supCheckEamil = filter_var(trim($split[$i]),FILTER_SANITIZE_EMAIL);
+                                if (filter_var($supCheckEamil, FILTER_VALIDATE_EMAIL)) {
+                                    $supEmailsArray[$lineNum][] = $supCheckEamil;
                                 }
                             }
                         }
@@ -419,6 +422,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
         }
         $participantId = $rows[0]['participant_id'];
         $responseId = $rows[0]['response_id'];
+        echo "Part ID $participantId and response $responseId<br/>";
         ## Create participant and return code if doesn't exist yet
         if($participantId == "" || $responseId == "") {
 
@@ -435,8 +439,6 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
             $sql = "INSERT INTO redcap_surveys_response (participant_id, record, instance, first_submit_time, return_code)
 					VALUES (?, ?, ?, NULL, ?)";
             $result = ExternalModules::query($sql,[$participantId,prep($record),$instance,$returnCode]);
-            //echo "$sql<br/>";
-            if(!db_query($sql)) echo "Error: ".db_error()." <br />$sql<br />";
             $responseId = db_insert_id();
         }
         ## Reset response status if it already exists
