@@ -264,7 +264,7 @@ class CrossProjectSurveyInvite extends AbstractExternalModule
 
                                 if ($supLanguageValue != "" && $supSenderValue != "" && $supSubjectValue != "" && !empty($supEmailsArray[$emailIndex])) {
                                     foreach ($supEmailsArray[$emailIndex] as $supEmail) {
-                                        $this->addSurveyToScheduler($autoRecordID, $supEmail, $surveyId, $sendDate, $hash, $supSubjectValue, $supSendLanguage, $supSenderValue, $emailInstance, 0);
+                                        $this->addSurveyToScheduler($autoRecordID, $supEmail, $surveyId, $sendDate, $hash, $supSubjectValue, $supSendLanguage, $supSenderValue, $emailInstance);
                                     }
                                     if ($supDestEmailField != "" && in_array($supDestEmailField, array_keys($destMeta))) {
                                         $saveArray = array($sourceIndex=>array($projectObject->table_pk=>$autoRecordID,'redcap_event_name'=>$projectObject->firstEventId,$supDestEmailField=>implode(",", $supEmailsArray[$emailIndex])));
